@@ -1,0 +1,293 @@
+// Blynk credentials
+#define BLYNK_TEMPLATE_ID "TMPL6a9de3M8_"
+#define BLYNK_TEMPLATE_NAME "FinalProject"
+#define BLYNK_AUTH_TOKEN "DmSHQm2o_g_qclPwK-7Ket6DHS4d4Dph"
+#define BLYNK_FIRMWARE_VERSION "0.1.0"
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <BlynkSimpleEsp8266.h>
+
+
+const char* ssid = "ltpltp";
+const char* password = "tamsobay";
+
+ESP8266WebServer server(80);
+
+// Declare pin numbers
+const int ledPins[] = { D0, D7, D2, D8, D1 };
+const int switchPins[] = { D6, D4, D3, D5 };
+
+boolean bt1_state = HIGH;
+boolean bt2_state = HIGH;
+boolean bt3_state = HIGH;
+boolean bt4_state = HIGH;
+
+bool ledStates[] = { false, false, false, false, false };
+bool lastSwitchStates[] = { HIGH, HIGH, HIGH, HIGH };
+
+int d5PressCount = 0;
+int bt4PressCount = 0;
+
+void handleToggleLED(int ledIndex) {
+  ledStates[ledIndex] = !ledStates[ledIndex];
+  digitalWrite(ledPins[ledIndex], ledStates[ledIndex] ? HIGH : LOW);
+  server.send(200, "text/plain", String(ledStates[ledIndex]));
+}
+
+// Route handlers
+void handleRoot() {
+  server.send(200, "text/html", R"=====(
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>IOT</title>
+      <style>
+        /* CSS styles */
+      </style>
+  </head>
+  <body>
+      <h1 class="heading">Group 5</h1>
+
+      <div class="btn-container">
+          <button class="btn handMade-btn">
+              HandMade
+          </button>
+
+          <button class="btn automatic-btn">
+              Automatic
+          </button>
+      </div>
+
+      <div class="handMade-container">
+          <div class="item">
+              <button class="btn" onclick="toggleLED(0)">Led 1</button>
+          </div>
+
+          <div class="item">
+              <button class="btn" onclick="toggleLED(1)">Led 2</button>
+          </div>
+
+          <div class="item">
+              <button class="btn" onclick="toggleLED(2)">Led 3</button>
+          </div>
+
+          <div class="item">
+              <button class="btn" onclick="toggleLED(3)">Led 4</button>
+          </div>
+
+          <div class="item">
+              <button class="btn" onclick="toggleLED(4)">Led 5</button>
+          </div>
+      </div>
+
+      <div class="camera-container">
+          <div class="camera">Camera here</div>
+      </div>
+
+      <script>
+        /* JavaScript to handle button clicks and WebSocket */
+      </script>
+  </body>
+  </html>
+  )=====");
+}
+
+void handleToggleLEDRequest() {
+  if (server.hasArg("index")) {
+    int index = server.arg("index").toInt();
+    if (index >= 0 && index < 5) {
+      handleToggleLED(index);
+    }
+  } else {
+    server.send(400, "text/plain", "Bad Request");
+  }
+}
+
+void setup() {
+  // Initialize LED pins
+  for (int i = 0; i < 5; i++) {
+    pinMode(ledPins[i], OUTPUT);
+    digitalWrite(ledPins[i], LOW);
+    pinMode(switchPins[i], INPUT_PULLUP);
+  }
+
+  pinMode(D1, OUTPUT);
+  pinMode(D7, OUTPUT);
+  pinMode(D2, OUTPUT);
+  pinMode(D8, OUTPUT);
+  pinMode(D1, OUTPUT);
+  pinMode(D6, INPUT_PULLUP);
+  pinMode(D4, INPUT_PULLUP);
+  pinMode(D3, INPUT_PULLUP);
+  pinMode(D5, INPUT_PULLUP);
+  pinMode(A0, INPUT_PULLUP);
+
+  // Start serial communication for debugging
+  Serial.begin(115200);
+
+  // Connect to WiFi
+  Serial.print("Connecting to the Network");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("WiFi connected");
+  Serial.print("IP Address of network: ");
+  Serial.println(WiFi.localIP());
+
+  // Set up server routes
+  server.on("/", handleRoot);
+  server.on("/toggleLED", handleToggleLEDRequest);
+
+  // Start the server
+  server.begin();
+  Serial.println("Server started");
+  Serial.print("Copy and paste the following URL: http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("/");
+
+  // Start Blynk
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, password);
+}
+
+void loop() {
+  server.handleClient();  // Handle web server requests
+  Blynk.run();            // Handle Blynk
+
+  for (int i = 0; i < 4; i++) {
+    bool switchState = digitalRead(switchPins[i]);
+    if (switchState == LOW && lastSwitchStates[i] == HIGH) {
+      if (i == 3) {  // D5 pin index in switchPins array
+        d5PressCount++;
+        switch (d5PressCount) {
+          case 1:
+            digitalWrite(ledPins[3], HIGH);  // Turn on LED 4
+            break;
+          case 2:
+            digitalWrite(ledPins[3], LOW);  // Turn off LED 4
+            break;
+          case 3:
+            digitalWrite(ledPins[4], HIGH);  // Turn on LED 5
+            break;
+          case 4:
+            digitalWrite(ledPins[4], LOW);  // Turn off LED 5
+            break;
+          case 5:
+            digitalWrite(ledPins[3], HIGH);  // Turn on LED 4
+            digitalWrite(ledPins[4], HIGH);  // Turn on LED 5
+            break;
+          case 6:
+            digitalWrite(ledPins[3], LOW);  // Turn off LED 4
+            digitalWrite(ledPins[4], LOW);  // Turn off LED 5
+            d5PressCount = 0;
+            break;
+        }
+      } else {
+        ledStates[i] = !ledStates[i];
+        digitalWrite(ledPins[i], ledStates[i] ? HIGH : LOW);
+      }
+      delay(50);
+    }
+    lastSwitchStates[i] = switchState;
+  }
+
+  check_button();
+  delay(100);
+}
+
+BLYNK_WRITE(V1) {
+  int p = param.asInt();
+  Serial.print("V1 triggered: ");
+  Serial.println(p);
+  digitalWrite(D1, p);
+}
+
+BLYNK_WRITE(V2) {
+  int p = param.asInt();
+  Serial.print("V2 triggered: ");
+  Serial.println(p);
+  digitalWrite(D7, p);
+}
+
+BLYNK_WRITE(V3) {
+  int p = param.asInt();
+  Serial.print("V3 triggered: ");
+  Serial.println(p);
+  digitalWrite(D2, p);
+}
+
+BLYNK_WRITE(V4) {
+  int p = param.asInt();
+  Serial.print("V4 triggered: ");
+  Serial.println(p);
+  digitalWrite(D8, p);
+}
+
+void check_button() {
+  if (digitalRead(D6) == LOW) {
+    if (bt1_state == HIGH) {
+      digitalWrite(D1, !digitalRead(D1));
+      Blynk.virtualWrite(V1, digitalRead(D1));
+      bt1_state = LOW;
+    }
+  } else {
+    bt1_state = HIGH;
+  }
+
+  if (digitalRead(D4) == LOW) {
+    if (bt2_state == HIGH) {
+      digitalWrite(D7, !digitalRead(D7));
+      Blynk.virtualWrite(V2, digitalRead(D7));
+      bt2_state = LOW;
+    }
+  } else {
+    bt2_state = HIGH;
+  }
+
+  if (digitalRead(D3) == LOW) {
+    if (bt3_state == HIGH) {
+      digitalWrite(D2, !digitalRead(D2));
+      Blynk.virtualWrite(V3, digitalRead(D2));
+      bt3_state = LOW;
+    }
+  } else {
+    bt3_state = HIGH;
+  }
+
+  if (digitalRead(D5) == LOW) {
+    if (bt4_state == HIGH) {
+      bt4PressCount++;
+      switch (bt4PressCount) {
+        case 1:
+          digitalWrite(D8, HIGH);  // Turn on LED 4
+          break;
+        case 2:
+          digitalWrite(D8, LOW);  // Turn off LED 4
+          break;
+        case 3:
+          digitalWrite(D1, HIGH);  // Turn on LED 5
+          break;
+        case 4:
+          digitalWrite(D1, LOW);  // Turn off LED 5
+          break;
+        case 5:
+          digitalWrite(D8, HIGH);  // Turn on LED 4
+          digitalWrite(D1, HIGH);  // Turn on LED 5
+          break;
+        case 6:
+          digitalWrite(D8, LOW);  // Turn off LED 4
+          digitalWrite(D1, LOW);  // Turn off LED 5
+          bt4PressCount = 0;      // Reset the count after the 6th press
+          break;
+      }
+      Blynk.virtualWrite(V4, digitalRead(D8));
+      Blynk.virtualWrite(V5, digitalRead(D1));
+      bt4_state = LOW;
+    }
+  } else {
+    bt4_state = HIGH;
+  }
+}
