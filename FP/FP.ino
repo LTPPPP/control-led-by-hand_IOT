@@ -7,23 +7,23 @@
 #include <ESP8266WebServer.h>
 #include <BlynkSimpleEsp8266.h>
 
-
-const char* ssid = "ltpltp";
-const char* password = "tamsobay";
+const char *ssid = "...";
+const char *password = "...";
 
 ESP8266WebServer server(80);
 
 // Declare pin numbers
-const int ledPins[] = { D0, D7, D2, D8, D1 };
-const int switchPins[] = { D6, D4, D3, D5 };
+const int ledPins[] = {D0, D7, D2, D8, D1};
+const int switchPins[] = {D6, D4, D3, D5};
 
-bool ledStates[] = { false, false, false, false, false };
-bool lastSwitchStates[] = { HIGH, HIGH, HIGH, HIGH };
+bool ledStates[] = {false, false, false, false, false};
+bool lastSwitchStates[] = {HIGH, HIGH, HIGH, HIGH};
 
 int d5PressCount = 0;
 
-void handleToggleLED(int ledIndex) {
-  //sync off or on
+void handleToggleLED(int ledIndex)
+{
+  // sync off or on
   ledStates[ledIndex] = !ledStates[ledIndex];
   digitalWrite(ledPins[ledIndex], ledStates[ledIndex] ? HIGH : LOW);
   Blynk.virtualWrite(ledIndex + 1, ledStates[ledIndex]);
@@ -31,7 +31,8 @@ void handleToggleLED(int ledIndex) {
 }
 
 // Route handlers
-void handleRoot() {
+void handleRoot()
+{
   server.send(200, "text/html", R"=====(
   <!DOCTYPE html>
   <html lang="en">
@@ -250,26 +251,34 @@ void handleRoot() {
   )=====");
 }
 
-void handleToggleLEDRequest() {
-  if (server.hasArg("index")) {
+void handleToggleLEDRequest()
+{
+  if (server.hasArg("index"))
+  {
     int index = server.arg("index").toInt();
-    if (index >= 0 && index < 5) {
+    if (index >= 0 && index < 5)
+    {
       handleToggleLED(index);
     }
-  } else {
+  }
+  else
+  {
     server.send(400, "text/plain", "Bad Request");
   }
 }
 
-void setup() {
+void setup()
+{
   // Initialize LED pins
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 5; i++)
+  {
     pinMode(ledPins[i], OUTPUT);
     digitalWrite(ledPins[i], LOW);
     pinMode(switchPins[i], INPUT_PULLUP);
   }
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 5; i++)
+  {
     Blynk.virtualWrite(i + 1, ledStates[i]);
   }
 
@@ -289,16 +298,17 @@ void setup() {
   // Connect to WiFi
   Serial.print("Connecting to the Network");
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     delay(500);
     Serial.print(".");
   }
   Serial.println("WiFi connected");
   Serial.print("IP Address of network: ");
   Serial.println(WiFi.localIP());
-+
-  // Set up server routes
-  server.on("/", handleRoot);
+  +
+      // Set up server routes
+      server.on("/", handleRoot);
   server.on("/toggleLED", handleToggleLEDRequest);
   server.on("/fingerstatus", HTTP_GET, handleFingerStatus);
 
@@ -314,39 +324,46 @@ void setup() {
   server.on("/updateWebInterface", updateWebInterface);
 }
 
-void loop() {
-  server.handleClient();  // Handle web server requests
-  Blynk.run();            // Handle Blynk
+void loop()
+{
+  server.handleClient(); // Handle web server requests
+  Blynk.run();           // Handle Blynk
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 4; i++)
+  {
     bool switchState = digitalRead(switchPins[i]);
-    if (switchState == LOW && lastSwitchStates[i] == HIGH) {
-      if (i == 3) {  // D5 pin index in switchPins array
+    if (switchState == LOW && lastSwitchStates[i] == HIGH)
+    {
+      if (i == 3)
+      { // D5 pin index in switchPins array
         d5PressCount++;
-        switch (d5PressCount) {
-          case 1:
-            digitalWrite(ledPins[3], HIGH);  // Turn on LED 4
-            break;
-          case 2:
-            digitalWrite(ledPins[3], LOW);  // Turn off LED 4
-            break;
-          case 3:
-            digitalWrite(ledPins[4], HIGH);  // Turn on LED 5
-            break;
-          case 4:
-            digitalWrite(ledPins[4], LOW);  // Turn off LED 5
-            break;
-          case 5:
-            digitalWrite(ledPins[3], HIGH);  // Turn on LED 4
-            digitalWrite(ledPins[4], HIGH);  // Turn on LED 5
-            break;
-          case 6:
-            digitalWrite(ledPins[3], LOW);  // Turn off LED 4
-            digitalWrite(ledPins[4], LOW);  // Turn off LED 5
-            d5PressCount = 0;
-            break;
+        switch (d5PressCount)
+        {
+        case 1:
+          digitalWrite(ledPins[3], HIGH); // Turn on LED 4
+          break;
+        case 2:
+          digitalWrite(ledPins[3], LOW); // Turn off LED 4
+          break;
+        case 3:
+          digitalWrite(ledPins[4], HIGH); // Turn on LED 5
+          break;
+        case 4:
+          digitalWrite(ledPins[4], LOW); // Turn off LED 5
+          break;
+        case 5:
+          digitalWrite(ledPins[3], HIGH); // Turn on LED 4
+          digitalWrite(ledPins[4], HIGH); // Turn on LED 5
+          break;
+        case 6:
+          digitalWrite(ledPins[3], LOW); // Turn off LED 4
+          digitalWrite(ledPins[4], LOW); // Turn off LED 5
+          d5PressCount = 0;
+          break;
         }
-      } else {
+      }
+      else
+      {
         ledStates[i] = !ledStates[i];
         digitalWrite(ledPins[i], ledStates[i] ? HIGH : LOW);
       }
@@ -359,121 +376,138 @@ void loop() {
   delay(100);
 }
 
-BLYNK_WRITE(V1) {
+BLYNK_WRITE(V1)
+{
   int p = param.asInt();
   Serial.print("V1 triggered: ");
   Serial.println(p);
   digitalWrite(ledPins[0], p);
-   updateWebInterface(); 
+  updateWebInterface();
 }
 
-BLYNK_WRITE(V2) {
+BLYNK_WRITE(V2)
+{
   int p = param.asInt();
   Serial.print("V2 triggered: ");
   Serial.println(p);
   digitalWrite(ledPins[1], p);
-   updateWebInterface(); 
+  updateWebInterface();
 }
 
-BLYNK_WRITE(V3) {
+BLYNK_WRITE(V3)
+{
   int p = param.asInt();
   Serial.print("V3 triggered: ");
   Serial.println(p);
   digitalWrite(ledPins[2], p);
-   updateWebInterface(); 
+  updateWebInterface();
 }
 
-BLYNK_WRITE(V4) {
+BLYNK_WRITE(V4)
+{
   int p = param.asInt();
   Serial.print("V4 triggered: ");
   Serial.println(p);
   d5PressCount++;
-  switch (d5PressCount) {
-    case 1:
-      digitalWrite(ledPins[3], HIGH);  // Turn on LED 4
-      break;
-    case 2:
-      digitalWrite(ledPins[3], LOW);  // Turn off LED 4
-      break;
-    case 3:
-      digitalWrite(ledPins[4], HIGH);  // Turn on LED 5
-      break;
-    case 4:
-      digitalWrite(ledPins[4], LOW);  // Turn off LED 5
-      break;
-    case 5:
-      digitalWrite(ledPins[3], HIGH);  // Turn off LED 4
-      digitalWrite(ledPins[4], HIGH);  // Turn off LED 5
-      break;
-    case 6:
-      digitalWrite(ledPins[3], LOW);  // Turn off LED 4
-      digitalWrite(ledPins[4], LOW);  // Turn off LED 5
-      d5PressCount = 0;  // Reset the count
-      break;
+  switch (d5PressCount)
+  {
+  case 1:
+    digitalWrite(ledPins[3], HIGH); // Turn on LED 4
+    break;
+  case 2:
+    digitalWrite(ledPins[3], LOW); // Turn off LED 4
+    break;
+  case 3:
+    digitalWrite(ledPins[4], HIGH); // Turn on LED 5
+    break;
+  case 4:
+    digitalWrite(ledPins[4], LOW); // Turn off LED 5
+    break;
+  case 5:
+    digitalWrite(ledPins[3], HIGH); // Turn off LED 4
+    digitalWrite(ledPins[4], HIGH); // Turn off LED 5
+    break;
+  case 6:
+    digitalWrite(ledPins[3], LOW); // Turn off LED 4
+    digitalWrite(ledPins[4], LOW); // Turn off LED 5
+    d5PressCount = 0;              // Reset the count
+    break;
   }
-   updateWebInterface(); 
+  updateWebInterface();
 }
 
-void check_button() {
-  for (int i = 0; i < 4; i++) {
+void check_button()
+{
+  for (int i = 0; i < 4; i++)
+  {
     bool switchState = digitalRead(switchPins[i]);
-    if (switchState == LOW && lastSwitchStates[i] == HIGH) {
-      if (i == 3) {  // D5 pin index in switchPins array
+    if (switchState == LOW && lastSwitchStates[i] == HIGH)
+    {
+      if (i == 3)
+      { // D5 pin index in switchPins array
         d5PressCount++;
-        switch (d5PressCount) {
-          case 1:
-            digitalWrite(ledPins[3], HIGH);  // Turn on LED 4
-            break;
-          case 2:
-            digitalWrite(ledPins[3], LOW);  // Turn off LED 4
-            break;
-          case 3:
-            digitalWrite(ledPins[4], HIGH);  // Turn on LED 5
-            break;
-          case 4:
-            digitalWrite(ledPins[4], LOW);  // Turn off LED 5
-            break;
-          case 5:
-            digitalWrite(ledPins[3], HIGH);  // Turn on LED 4
-            digitalWrite(ledPins[4], HIGH);  // Turn on LED 5
-            break;
-          case 6:
-            digitalWrite(ledPins[3], LOW);  // Turn off LED 4
-            digitalWrite(ledPins[4], LOW);  // Turn off LED 5
-            d5PressCount = 0;
-            break;
+        switch (d5PressCount)
+        {
+        case 1:
+          digitalWrite(ledPins[3], HIGH); // Turn on LED 4
+          break;
+        case 2:
+          digitalWrite(ledPins[3], LOW); // Turn off LED 4
+          break;
+        case 3:
+          digitalWrite(ledPins[4], HIGH); // Turn on LED 5
+          break;
+        case 4:
+          digitalWrite(ledPins[4], LOW); // Turn off LED 5
+          break;
+        case 5:
+          digitalWrite(ledPins[3], HIGH); // Turn on LED 4
+          digitalWrite(ledPins[4], HIGH); // Turn on LED 5
+          break;
+        case 6:
+          digitalWrite(ledPins[3], LOW); // Turn off LED 4
+          digitalWrite(ledPins[4], LOW); // Turn off LED 5
+          d5PressCount = 0;
+          break;
         }
-      } else {
+      }
+      else
+      {
         ledStates[i] = !ledStates[i];
         digitalWrite(ledPins[i], ledStates[i] ? HIGH : LOW);
       }
-      updateWebInterface();  // Sync with web interface
+      updateWebInterface(); // Sync with web interface
       delay(50);
     }
     lastSwitchStates[i] = switchState;
   }
 }
 
-
-void updateWebInterface() {
+void updateWebInterface()
+{
   String ledStatesString = "";
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 5; i++)
+  {
     ledStatesString += ledStates[i] ? '1' : '0';
   }
   server.send(200, "text/plain", ledStatesString);
 }
 
-
-void handleFingerStatus() {
+void handleFingerStatus()
+{
   String state = server.arg("state");
   Serial.println("Received state: " + state);
 
   // Parse the state and control LEDs
-  for (int i = 0; i < 5; i++) {
-    if (state[i] == '1') {
-      digitalWrite(ledPins[i], HIGH);  // Turn on the LED
-    } else {
-      digitalWrite(ledPins[i], LOW);  // Turn off the LED
+  for (int i = 0; i < 5; i++)
+  {
+    if (state[i] == '1')
+    {
+      digitalWrite(ledPins[i], HIGH); // Turn on the LED
+    }
+    else
+    {
+      digitalWrite(ledPins[i], LOW); // Turn off the LED
     }
   }
 
